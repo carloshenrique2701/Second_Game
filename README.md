@@ -48,7 +48,6 @@ space-invaders/
 - [x] Múltiplos inimigos
 - [x] Efeitos sonoros
 - [x] Diferentes níveis de dificuldade
-- [ ] Sistema de power-ups (em desenvolvimento)
 
 ## 🤝 Contribuição
 Contribuições são bem-vindas! Siga os passos:
