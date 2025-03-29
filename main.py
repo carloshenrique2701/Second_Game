@@ -16,7 +16,7 @@ try:
     image_fundo = pygame.image.load('imgs/fundo.png').convert()
     nave_player = pygame.transform.scale(pygame.image.load('imgs/nave_aliada.png'), (80, 80))
     nave_inimiga = pygame.transform.scale(pygame.image.load('imgs/nave_inimiga.png'), (80, 80))
-    tiro = pygame.transform.scale(pygame.image.load('imgs/missel.png'), (30, 30))
+    imagem_tiro = pygame.transform.scale(pygame.image.load('imgs/missel.png'), (30, 30))
 except pygame.error as e:
     print(f"Erro ao carregar imagens: {e}")
     pygame.quit()
@@ -50,16 +50,12 @@ class Inimigo:
 # Cria vários inimigos
 inimigos = [Inimigo() for _ in range(5)]  # 5 inimigos
 
-# Sistema de tiros
-class Tiro:
-    def __init__(self):
-        self.ativo = False
-        self.velocidade = 15
-        self.rect = tiro.get_rect()
-    
-    def disparar(self, x, y):
+# Sistema de tiros melhorado
+class Tiro_CLass:
+    def __init__(self, x, y):
         self.ativo = True
-        self.rect.center = (x, y - 40)  # Posiciona acima da nave
+        self.velocidade = 15
+        self.rect = imagem_tiro.get_rect(center=(x, y))
     
     def update(self):
         if self.ativo:
@@ -69,10 +65,12 @@ class Tiro:
     
     def draw(self):
         if self.ativo:
-            janela.blit(tiro, self.rect)
+            janela.blit(imagem_tiro, self.rect)
 
-tiro_player = Tiro()
+# Lista para armazenar todos os tiros ativos
+tiros_ativos = []
 cooldown_tiro = 0  # Sistema de cooldown
+COOLDOWN_MAX = 20  # Frames de espera entre tiros
 
 # Pontuação
 pontuacao = 0
@@ -104,17 +102,22 @@ while running:
     if teclas[pygame.K_RIGHT] and pos_x_player < LARGURA - 80:
         pos_x_player += vel_nave_player
     
-    # Disparo
+    # Disparo - sistema melhorado
     if cooldown_tiro > 0:
         cooldown_tiro -= 1
     
-    if teclas[pygame.K_SPACE] and not tiro_player.ativo and cooldown_tiro == 0:
-        tiro_player.disparar(pos_x_player, pos_y_player)
-        cooldown_tiro = 15  # Cooldown de 15 frames
+    if teclas[pygame.K_SPACE] and cooldown_tiro == 0:
+        tiros_ativos.append(Tiro_CLass(pos_x_player, pos_y_player - 40))  # Adiciona novo tiro
+        cooldown_tiro = COOLDOWN_MAX  # Reseta o cooldown
     
     # Atualizações
     player_rect.center = (pos_x_player, pos_y_player)
-    tiro_player.update()
+    
+    # Atualiza todos os tiros
+    for tiro in tiros_ativos[:]:  # Usamos [:] para criar uma cópia da lista
+        tiro.update()
+        if not tiro.ativo:
+            tiros_ativos.remove(tiro)
     
     # Atualiza inimigos e verifica colisões
     for inimigo in inimigos:
@@ -125,11 +128,13 @@ while running:
             pontuacao -= 1
             inimigo.reset()
         
-        # Colisão com tiro
-        if tiro_player.ativo and tiro_player.rect.colliderect(inimigo.rect):
-            pontuacao += 1
-            tiro_player.ativo = False
-            inimigo.reset()
+        # Colisão com tiros
+        for tiro in tiros_ativos[:]:
+            if tiro.ativo and tiro.rect.colliderect(inimigo.rect):
+                pontuacao += 1
+                tiro.ativo = False
+                inimigo.reset()
+                tiros_ativos.remove(tiro)
     
     # Renderização
     janela.blit(image_fundo, (0, 0))
@@ -138,9 +143,12 @@ while running:
     for inimigo in inimigos:
         inimigo.draw()
     
-    # Desenha jogador e tiro
+    # Desenha jogador
     janela.blit(nave_player, player_rect)
-    tiro_player.draw()
+    
+    # Desenha todos os tiros ativos
+    for tiro in tiros_ativos:
+        tiro.draw()
     
     # Mostra pontuação
     texto_pontuacao = fonte.render(f'Pontuação: {pontuacao}', True, (255, 255, 255))
